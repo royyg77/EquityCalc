@@ -1,0 +1,69 @@
+# ---- C++ / CMake ----
+build/
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.so.*
+*.dylib
+*.dll
+*.pyd
+*.exe
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+compile_commands.json
+CTestTestfile.cmake
+Testing/
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+.venv/
+venv/
+env/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+dist/
+.tox/
+
+# ---- Node / Frontend ----
+node_modules/
+frontend/dist/
+frontend/.vite/
+.npm/
+.yarn/
+*.tsbuildinfo
+
+# ---- IDE / Editor ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ---- Env / Secrets ----
+.env
+.env.local
+.env.*.local
+
+# ---- Logs ----
+*.log
+logs/
+
+# ---- OMPEval (built artifacts only — submodule source itself is tracked) ----
+engine/third_party/OMPEval/build/
+engine/third_party/OMPEval/lib/
+
+# ---- Local Claude Code state ----
+.claude/
