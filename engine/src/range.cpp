@@ -1,6 +1,6 @@
 #include "equitycalc/range.h"
 #include <algorithm>
-#include <numeric>
+// #include <numeric>
 
 namespace equitycalc {
 

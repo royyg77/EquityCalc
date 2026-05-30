@@ -16,3 +16,11 @@ include(GoogleTest)
 add_executable(test_card test_card.cpp)
 target_link_libraries(test_card PRIVATE equitycalc_core GTest::gtest_main)
 gtest_discover_tests(test_card)
+
+add_executable(test_combo test_combo.cpp)
+target_link_libraries(test_combo PRIVATE equitycalc_core GTest::gtest_main)
+gtest_discover_tests(test_combo)
+
+add_executable(test_range test_range.cpp)
+target_link_libraries(test_range PRIVATE equitycalc_core GTest::gtest_main)
+gtest_discover_tests(test_range)

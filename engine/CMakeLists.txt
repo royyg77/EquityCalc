@@ -42,7 +42,7 @@ target_include_directories(equitycalc_core PUBLIC
 target_sources(equitycalc_core PRIVATE
     third_party/OMPEval/omp/HandEvaluator.cpp
 )
-target_include_directories(equitycalc_core PRIVATE
+target_include_directories(equitycalc_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/OMPEval
 )
 
