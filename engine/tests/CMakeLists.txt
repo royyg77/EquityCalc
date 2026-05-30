@@ -1,7 +1,18 @@
-# Test framework choice TBD (GoogleTest or Catch2). For now, a smoke test
-# that just runs the CLI and checks the exit code.
-
-add_test(NAME cli_runs COMMAND equitycalc --version)
-set_tests_properties(cli_runs PROPERTIES
-    PASS_REGULAR_EXPRESSION "equitycalc"
+include(FetchContent)
+FetchContent_Declare(
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG v1.15.2
 )
+# Prevents GTest from overriding compiler/linker flags on Windows
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+
+include(GoogleTest)
+
+# Each class gets its own test executable linked against equitycalc_core.
+# Run all with: ctest --test-dir build --output-on-failure
+
+add_executable(test_card test_card.cpp)
+target_link_libraries(test_card PRIVATE equitycalc_core GTest::gtest_main)
+gtest_discover_tests(test_card)

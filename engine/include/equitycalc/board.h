@@ -32,7 +32,7 @@ public:
     // Use this during enumeration so recursion branches don't stomp each other.
     Board withCard(Card c) const;
 
-    unsigned  count() const noexcept { return evalHand.count(); }
+    unsigned  count() const noexcept { return evalHand_.count(); }
     uint64_t  mask()  const noexcept { return cardMask_; }
 
     // The accumulated omp::Hand — combined with combo.evalHand in the hot loop.
