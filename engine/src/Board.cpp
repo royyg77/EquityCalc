@@ -1,6 +1,6 @@
-#include "equitycalc/board.h"
+#include "equitycalc/Board.h"
 #include <cassert>
-#include <sstream>
+// #include <sstream>
 
 namespace equitycalc {
 

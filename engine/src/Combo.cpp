@@ -1,4 +1,4 @@
-#include "equitycalc/combo.h"
+#include "equitycalc/Combo.h"
 #include <cassert>
 
 namespace equitycalc {

@@ -1,4 +1,4 @@
-#include "equitycalc/evaluator.h"
+#include "equitycalc/Evaluator.h"
 
 namespace equitycalc {
 

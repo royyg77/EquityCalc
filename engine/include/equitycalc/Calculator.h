@@ -1,9 +1,9 @@
 #pragma once
 
-#include "equitycalc/board.h"
-#include "equitycalc/evaluator.h"
-#include "equitycalc/range.h"
-#include "equitycalc/result.h"
+#include "equitycalc/Board.h"
+#include "equitycalc/Evaluator.h"
+#include "equitycalc/Range.h"
+#include "equitycalc/Result.h"
 #include <cstdint>
 #include <vector>
 

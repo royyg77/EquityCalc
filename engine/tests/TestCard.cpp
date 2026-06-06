@@ -1,4 +1,4 @@
-#include "equitycalc/card.h"
+#include "equitycalc/Card.h"
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <set>

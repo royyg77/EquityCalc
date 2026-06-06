@@ -4,7 +4,12 @@ A fast poker equity calculator. C++ engine, Python (FastAPI) HTTP layer, React f
 
 ## Status
 
-v0.0 — skeleton only. See [CLAUDE.md](./CLAUDE.md) for current state and roadmap.
+v0.4 — engine core classes built and tested. v1.0 target is a CLI-only binary; the Python/FastAPI and React layers are deferred to v2.0.
+
+**Done:** Card · Combo · Range · Board (all with passing unit tests)
+**Next:** Parser → Evaluator → Calculator → CLI wiring
+
+See [CLAUDE.md](./CLAUDE.md) for full build order and roadmap.
 
 ## Quick start
 
@@ -43,4 +48,4 @@ docker compose up
 
 ## License
 
-TBD.
+ISC — see [LICENSE](./LICENSE). OMPEval (vendored dependency) is also ISC; its copyright notice is reproduced in the same file.

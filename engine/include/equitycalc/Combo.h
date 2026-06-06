@@ -4,7 +4,7 @@
 // Requires OMPEval vendored at engine/third_party/OMPEval/ with that path on
 // the include search path.
 
-#include "equitycalc/card.h"
+#include "equitycalc/Card.h"
 #include <omp/Hand.h>
 #include <cstdint>
 

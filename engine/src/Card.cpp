@@ -1,4 +1,4 @@
-#include "equitycalc/card.h"
+#include "equitycalc/Card.h"
 
 namespace equitycalc {
 

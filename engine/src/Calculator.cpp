@@ -1,4 +1,4 @@
-#include "equitycalc/calculator.h"
+#include "equitycalc/Calculator.h"
 #include <cassert>
 #include <chrono>
 #include <cmath>

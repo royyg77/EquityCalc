@@ -3,8 +3,8 @@
 // OMP boundary: this header includes <omp/Hand.h>.
 // Requires OMPEval vendored at engine/third_party/OMPEval/.
 
-#include "equitycalc/card.h"
-#include "equitycalc/combo.h"
+#include "equitycalc/Card.h"
+#include "equitycalc/Combo.h"
 #include <omp/Hand.h>
 #include <cstdint>
 #include <string>

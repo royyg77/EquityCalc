@@ -1,6 +1,6 @@
 #pragma once
 
-#include "equitycalc/combo.h"
+#include "equitycalc/Combo.h"
 #include <cstdint>
 #include <vector>
 

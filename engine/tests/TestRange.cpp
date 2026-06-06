@@ -1,4 +1,4 @@
-#include "equitycalc/range.h"
+#include "equitycalc/Range.h"
 #include <gtest/gtest.h>
 #include <cstdint>
 #include <vector>

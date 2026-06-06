@@ -4,48 +4,133 @@
 
 The Parser turns range strings into `Range` objects. It's the largest single piece of original code (~400 lines) and where you diverge most from OMP — you support **weights** (`:0.5`) and **dash ranges** (`22-99`), which OMP's `CardRange` does not. It's also the most heavily tested class: every grammar rule gets its own tests.
 
-Not a class — a set of free functions in a namespace, with one public entry point: `parseRange(std::string_view) -> Range` (or a `Result<Range, ParseError>` if you want structured errors).
+Not a class — a set of free functions in a namespace, with one public entry point: `parseRange(std::string_view) -> Range`.
 
-## The grammar (from the outline)
+## Key decisions
+
+1. **Error handling: STRICT.** `parseRange` throws `ParseError` on any unparseable input. `ParseError` carries a message and a 0-based cursor position into the normalized string. Do **not** copy OMP's silent-ignore behavior.
+2. **Weight policy on dedup: last-write-wins.** This lives in `Range::normalize()`, not the parser — the parser only attaches weights; it does not resolve conflicts.
+3. **Kicker-range semantics:** the top card is fixed, the second card (kicker) varies, both endpoints inclusive. Endpoints may be written in either order and are normalized internally.
+4. **Cursor type:** `size_t` index into the cleaned string. Easier to report positions for errors than a raw `const char*`.
+
+## Public surface
+
+A namespace of free functions, one public entry point. No class.
+
+```cpp
+namespace equitycalc {
+
+struct ParseError : std::runtime_error {
+    size_t position;
+    ParseError(std::string msg, size_t pos)
+        : std::runtime_error(std::move(msg)), position(pos) {}
+};
+
+// Strict: returns a normalized Range, or throws ParseError.
+Range parseRange(std::string_view input);
+
+// Parse a single card string ("Ah", "2s", …). Throws ParseError if invalid.
+Card parseCard(std::string_view s);
+
+} // namespace equitycalc
+```
+
+Everything else is `static` (internal linkage) inside `Parser.cpp`.
+
+## The grammar
 
 ```
 range        := element ("," element)*
 element      := hand (":" weight)?
-weight       := float                 ; typically [0, 1]
+weight       := float                 ; [0, ∞)
 
 hand         := specific | pair | suited | offsuit | anytwo
               | pair_plus | suited_plus | offsuit_plus
               | pair_range | suited_range | offsuit_range
               | "random"
 
-specific     := card card             ; "AhKs"
+specific     := card card             ; "AhKs"        →  1 combo
 card         := rank suit
-pair         := rank rank             ; ranks equal, "AA"
-suited       := rank rank "s"         ; "AKs"
-offsuit      := rank rank "o"         ; "AKo"
-anytwo       := rank rank             ; ranks unequal, "AK" (both suited+offsuit)
+pair         := rank rank             ; ranks equal,   "QQ"  →  6 combos
+suited       := rank rank "s"         ; "AKs"          →  4 combos
+offsuit      := rank rank "o"         ; "AKo"          → 12 combos
+anytwo       := rank rank             ; ranks unequal, "AK"  → 16 combos
 
-pair_plus    := pair "+"              ; "QQ+"
-suited_plus  := suited "+"            ; "AKs+"  (wrong — see Hard Parts; really kicker climb)
-offsuit_plus := offsuit "+"           ; "AKo+"
+pair_plus    := pair "+"              ; "QQ+"   → QQ,KK,AA   (18 combos)
+suited_plus  := suited "+"            ; "KTs+"  → KTs,KJs,KQs (12 combos)
+offsuit_plus := offsuit "+"           ; same kicker-climb semantics
 
-pair_range    := pair "-" pair         ; "22-99"
-suited_range  := suited "-" suited      ; "A5s-A2s"
+pair_range   := pair "-" pair         ; "22-99" → 8 pairs, either direction
+suited_range := suited "-" suited     ; "A5s-A2s" → A5s,A4s,A3s,A2s (16)
 offsuit_range := offsuit "-" offsuit
 ```
 
 ## Structure: hand-rolled recursive descent
 
-Walk the string with a cursor (a `const char*` or index). Each `parseX` function tries to consume a token, advances the cursor on success, and on failure backtracks the cursor to where it started. This is the same shape as OMP's `CardRange::parseHand` — read that for the state-machine pattern, then write your own with the extra features.
+Walk the string with a `size_t` cursor index. Each `parseX` function tries to consume a token, advances the cursor on success, and on failure backtracks the cursor to where it started. This is the same shape as OMP's `CardRange::parseHand` — read that for the state-machine pattern, then write your own with the extra features. `CardRange.cpp` is reference-only and is on the delete-after-Parser-ships list.
 
-Internal functions (private to the .cpp):
+Internal functions (all `static`, private to `Parser.cpp`), built bottom-up:
 
-- `parseElement(s, cursor) -> combos` — one hand + optional weight
-- `parseHand(s, cursor) -> combos`
-- `parseRank(s, cursor) -> rank`, `parseSuit(s, cursor) -> suit`
-- `parseWeight(s, cursor) -> float`
-- `parseChar(s, cursor, c) -> bool` — try to consume a specific char
-- expansion helpers: `expandPair`, `expandSuited`, `expandOffsuit`, `expandAnytwo`, `expandPlus`, `expandRange`
+**Step A — character-level consumers.** Cursor discipline is the contract: each either fully consumes its token and advances `cursor`, or consumes nothing and leaves `cursor` exactly where it found it. No partial consumption on a failure path.
+
+- `parseChar(s, cursor, c) -> bool` — consume one specific char if it matches
+- `parseRank(s, cursor, rank) -> bool` — one rank char → 0..12, advancing cursor on match
+- `parseSuit(s, cursor, suit) -> bool` — one suit char → 0..3 (s/h/c/d), advancing cursor on match
+- `parseWeight(s, cursor) -> float` — a float; throws `ParseError` if no digits consumed
+
+`parseRank`/`parseSuit` reuse the **same** char→value maps as `Card`. Do not invent a second mapping — suits are s/h/c/d (OMP order), not alphabetical. Input is already lowercased and whitespace-stripped by `parseRange` (Step E), so these consumers can assume clean input.
+
+**Step B — expansion helpers (pure combo generation, no parsing, no cursor).** Take ranks/flags, return `std::vector<Combo>`. Test against exact counts.
+
+- `addCombo(out, c1, c2, w)` — push one `Combo`
+- `expandCombos(out, r1, r2, suited, offsuited, w)` — expand a rank pair into combos per flags; the suited branch is skipped when `r1 == r2` (no suited pairs)
+- `expandAll(out, w)` — all 1326 combos for "random"
+
+Counts to assert: QQ → 6, AKs → 4, AKo → 12, AK → 16, random → 1326.
+
+**Step C — `parseHand`.** Tries each grammar alternative in order, saving `size_t start = cursor` at entry and restoring on every failure path. Order the attempts so longer/more specific forms are tried before shorter ones that are prefixes of them.
+
+Attempt order:
+1. Literal `"random"` → `expandAll`
+2. First rank. Try suit: if present → specific (two full rank+suit pairs, e.g. `AhKs`) → 1 combo
+3. First rank, no suit. Second rank. Inspect suffix:
+   - `s` → suited; then if `+` → suited-plus (kicker climb); if `-` → suited range
+   - `o` → offsuit; then `+` → offsuit-plus; if `-` → offsuit range
+   - no s/o and ranks equal → pair; then `+` → pair-plus; `-` → pair range
+   - no s/o and ranks unequal, no suffix → anytwo
+
+A failed `-` (e.g. `"QQ-"` with no valid second endpoint) must backtrack cleanly and report an error at the right position, not partial-consume.
+
+**Step D — `parseElement` (hand + optional weight).**
+
+```
+parseElement(s, cursor):
+    combos = parseHand(s, cursor)        // throws ParseError on failure
+    weight = 1.0
+    if parseChar(s, cursor, ':'):
+        weight = parseWeight(s, cursor)  // throws if malformed
+    for c in combos: c.weight = weight   // weight applies to ALL combos of the element
+    return combos
+```
+
+**Step E — `parseRange` (public entry).**
+
+```
+parseRange(input):
+    s = toLower(stripAllWhitespace(input))
+    range = Range()
+    cursor = 0
+    loop:
+        combos = parseElement(s, cursor)       // throws ParseError on failure
+        for c in combos: range.add(c)
+        if not parseChar(s, cursor, ','): break
+    if cursor != s.size():
+        throw ParseError("unexpected character at position N", cursor)
+    range.normalize()                          // sort + dedup + weight policy
+    return range
+```
+
+Whitespace handling: strip **all** whitespace (leading, trailing, and internal) up front, so `"  qq+ , aks "` parses identically to `"QQ+,AKs"`.
 
 ## Expansion semantics (the meat)
 
@@ -57,84 +142,113 @@ This is where bugs hide. Be precise:
 - `"AK"` → 16 combos (suited + offsuit)
 - `"random"` → all 1326 combos
 - `"QQ+"` → all pairs from QQ up to AA (QQ, KK, AA) — **higher pairs**
-- `"AKs+"` → kicker climb: this means A-with-kicker-K-and-up... but K is already the top kicker below A, so `"KTs+"` → KTs, KJs, KQs. **The kicker climbs toward the higher card, not the pair.**
+- `"KTs+"` → kicker climbs toward the higher card: KTs, KJs, KQs (12 combos). **Not higher pairs. Kicker does not reach the top card.**
 - `"22-99"` → 22, 33, 44, 55, 66, 77, 88, 99 (pair range)
-- `"A5s-A2s"` → A5s, A4s, A3s, A2s (suited range, kicker descends)
+- `"A5s-A2s"` → A5s, A4s, A3s, A2s (suited range, kicker varies)
 
 ## Invariants
 
 - `parseRange` always returns a normalized `Range` (sorted, deduped) on success.
-- Cursor discipline: every `parseX` either fully consumes its token and advances the cursor, or consumes nothing and leaves the cursor where it found it (clean backtrack). No partial consumption on failure.
-- Parsing is case-insensitive and ignores surrounding whitespace.
+- Cursor discipline: every `parseX` either fully consumes its token and advances the cursor, or consumes nothing and leaves the cursor exactly where it found it. No partial consumption on failure.
+- Parsing is case-insensitive; all whitespace is stripped before parsing begins.
 - A weight applies to **all** combos produced by its element.
+- `Parser.h`/`Parser.cpp` include **no OMP header** and name **no `omp::` type**.
 
 ## Hard parts
 
-**`+` semantics differ for pairs vs non-pairs.** For pairs, `+` means "this pair and all higher pairs" (`QQ+` = QQ, KK, AA). For non-pairs, `+` means "this hand and all higher *kickers* with the same top card" (`KTs+` = KTs, KJs, KQs — the second card climbs up to just below the top card). These are two different loops. OMP's `addCombosPlus` implements both branches; read it. If Claude Code treats `+` uniformly, it'll get one of the two cases wrong. This is the most common parser bug.
+**`+` is TWO different loops (the #1 parser bug).** For pairs, `+` means "this pair and all higher pairs" (`QQ+` = QQ, KK, AA). For non-pairs, `+` means "second card climbs toward the top card" (`KTs+` = KTs, KJs, KQs — kicker climbs up to just below the top card). A single uniform `+` branch will get one of the two cases wrong. Write both and test both:
 
-**Dash ranges and direction.** `22-99` ascends pairs. `A5s-A2s` descends kickers. The user can write the endpoints in either order (`22-99` or `99-22`); normalize internally. Decide and document the exact semantics for kicker ranges (which card is fixed, which varies, inclusive both ends).
+```
+if r1 == r2:                           // pair-plus: higher pairs
+    for r from r1 to A:
+        expandCombos(out, r, r, false, true, w)
+else:                                  // kicker-plus: second card climbs
+    hi = max(r1, r2); lo = min(r1, r2)
+    for k from lo to (hi - 1):
+        expandCombos(out, hi, k, suited, offsuited, w)
+```
 
-**Weights attach to the element, not individual combos in the string.** `"QQ+:0.5"` — does the 0.5 apply to QQ, or to QQ+KK+AA? It applies to the whole element (all of QQ+). Make sure the weight is applied after expansion, to every produced combo. Edge case: `"QQ:0.5,KK"` — QQ combos get 0.5, KK combos get the default 1.0.
+**Dash ranges: direction-independent, both ends inclusive.** `22-99` and `99-22` parse identically; normalize endpoint order internally. For pair ranges both endpoints must be pairs; for kicker ranges the top card must match on both sides (`"A5s-K2s"` is an error). Iterate low → high after normalization; both ends are inclusive.
 
-**Error handling — strict vs lenient.** OMP silently ignores anything it can't parse (it just stops). For a CLI you probably want to *tell the user* their input was malformed. Decide:
-- **Strict:** any unparseable token → return an error with a position and message. Better UX.
-- **Lenient (OMP-style):** parse what you can, ignore the rest. Simpler, but silently drops typos.
-Recommendation: strict for v1.0, with a clear message ("unexpected character 'x' at position 4"). Document the choice. If Claude Code copies OMP's silent-ignore behavior, that's a UX regression worth flagging.
+**Weights attach to the element, not individual combos.** `"QQ+:0.5"` — the 0.5 applies to all of QQ, KK, AA (every combo produced by the element). The weight is applied **after** expansion. Edge case: `"QQ:0.5,KK"` — QQ combos get 0.5, KK combos get the default 1.0. Duplicate-combo weight conflicts are resolved by `Range::normalize()` (last-write-wins), not here.
 
-**Backtracking correctness.** The classic recursive-descent trap: a `parseX` that consumes some characters then fails must restore the cursor. E.g. `parseHand` reads a rank, then a suit, then tries a second rank and fails — it must reset the cursor to before the first rank so the caller can try a different rule. OMP does this with a `backtrack` pointer saved at entry. Verify the generated code saves and restores the cursor on every failure path.
+**Backtracking correctness.** Save `size_t start = cursor;` at entry to every `parseX`; on any failure path, `cursor = start;` before returning or throwing. The classic trap: `parseHand` reads a rank, then a suit, then tries a second rank and fails — it must reset to before the first rank so a near-miss like `"Ah"` followed by garbage reports the error at the right position.
 
-**Reference, don't copy.** Read `CardRange.cpp` for the parsing skeleton and the canonical dedup logic, then write your own. Yours has weights, dash ranges, and (recommended) real error messages — it is not a rename of theirs.
+**Reference, don't copy.** Read `CardRange.cpp` for the parsing skeleton and canonical dedup logic, then write original code. Yours adds weights, dash ranges, and strict errors — it is not a rename of OMP.
 
 ## OMP interaction
 
-None. The Parser is pure your-code. It produces `Range`s of `Combo`s (which carry `omp::Hand`s built in the Combo constructor), but the Parser itself names no OMP type and calls no OMP function. `CardRange.cpp` is read as a reference only and is on the delete-after-Parser-ships list.
+None. The Parser is pure project code. It produces `Range`s of `Combo`s (which carry `omp::Hand`s built in the Combo constructor), but the Parser itself includes no OMP header and names no OMP type. `CardRange.cpp` is reference-only and is on the delete-after-Parser-ships list.
 
-## Pseudocode (selective — not every rule)
+## Pseudocode
 
 ```
+expandPlus(r1, r2, suited, offsuited):
+    if r1 == r2:                           // pair-plus: higher pairs
+        for r from r1 to A:
+            expandCombos(out, r, r, false, true, 1.0)
+    else:                                  // kicker-plus: second card climbs
+        hi = max(r1, r2); lo = min(r1, r2)
+        for k from lo to (hi - 1):
+            expandCombos(out, hi, k, suited, offsuited, 1.0)
+
 parseRange(input):
     s = stripWhitespace(toLower(input))
     range = Range()
     cursor = 0
-    if s == "random": return Range of all 1326 combos
     loop:
-        combos = parseElement(s, cursor)        // advances cursor
-        if combos is error: return error
+        combos = parseElement(s, cursor)
         for c in combos: range.add(c)
         if not parseChar(s, cursor, ','): break
-    if cursor != s.length: return error("trailing garbage")
+    if cursor != s.length: throw ParseError("trailing garbage", cursor)
     range.normalize()
     return range
 
 parseElement(s, cursor):
     combos = parseHand(s, cursor)
-    if combos is error: return error
     weight = 1.0
     if parseChar(s, cursor, ':'):
         weight = parseWeight(s, cursor)
     for c in combos: c.weight = weight
     return combos
-
-expandPlus(r1, r2, suited, offsuit):     // after detecting '+'
-    if r1 == r2:                          // pair+ : higher pairs
-        for r from r1 to A: addPair(r, ...)
-    else:                                 // kicker+ : second card climbs
-        hi = max(r1, r2); lo = min(r1, r2)
-        for k from lo to (hi - 1): addCombos(hi, k, suited, offsuit)
 ```
 
-## Test cases to expect (one family per grammar rule)
+## Test cases to expect
 
-- Specific: `"AhKs"` → 1 combo with exactly those cards
-- Pair: `"QQ"` → 6 combos
-- Suited / offsuit / anytwo: `"AKs"` → 4, `"AKo"` → 12, `"AK"` → 16
-- Pair plus: `"QQ+"` → QQ, KK, AA (18 combos)
-- Kicker plus: `"KTs+"` → KTs, KJs, KQs (12 combos); verify it does NOT include higher pairs
-- Pair range: `"22-99"` → 8 pairs; `"99-22"` parses identically
-- Kicker range: `"A5s-A2s"` → A5s,A4s,A3s,A2s (16 combos)
-- Combination: `"QQ+,AKs"` → union, deduped
-- Weights: `"QQ:0.5"` → all 6 combos weight 0.5; `"QQ:0.5,KK"` → QQ at 0.5, KK at 1.0
-- `"random"` → 1326 combos
-- Case/whitespace: `"  qq+ , aks "` parses same as `"QQ+,AKs"`
-- Errors (if strict): `"AhZz"`, `"QQ++"`, `"QQ-"`, `"5x"` → error with position
-- Backtrack: a near-miss like `"Ah"` followed by non-card chars resets cleanly
+| Input | Expected |
+|---|---|
+| `"AhKs"` | 1 combo, exactly those two cards |
+| `"QQ"` | 6 combos |
+| `"AKs"` | 4 combos |
+| `"AKo"` | 12 combos |
+| `"AK"` | 16 combos |
+| `"QQ+"` | QQ, KK, AA = 18 combos |
+| `"KTs+"` | KTs, KJs, KQs = 12 combos; no higher pairs present |
+| `"22-99"` | 8 pairs |
+| `"99-22"` | identical to `"22-99"` |
+| `"A5s-A2s"` | A5s, A4s, A3s, A2s = 16 combos |
+| `"QQ+,AKs"` | union, deduped |
+| `"QQ:0.5"` | 6 combos, all weight 0.5 |
+| `"QQ:0.5,KK"` | QQ at 0.5, KK at 1.0 |
+| `"random"` | 1326 combos |
+| `"  qq+ , aks "` | identical to `"QQ+,AKs"` |
+| `"AhZz"` | `ParseError` with position > 0 |
+| `"QQ++"` | `ParseError` with position |
+| `"QQ-"` | `ParseError` with position |
+| `"5x"` | `ParseError` with position |
+| `"Ah"` + trailing garbage | clean backtrack; error at the garbage position |
+| `"QQ+,QQ"` | 18 combos after normalize (deduped) |
+
+## Review checklist
+
+- [ ] `Parser.h`/`Parser.cpp` include **no** OMP header and name **no** `omp::` type.
+- [ ] Strict errors with position; not OMP's silent-ignore.
+- [ ] `+` has two distinct branches (pair-up vs kicker-climb), both tested.
+- [ ] Dash ranges normalize endpoint order; kicker range fixes top card, both ends inclusive.
+- [ ] Every `parseX` saves cursor at entry and restores on all failure paths.
+- [ ] Weight applied after expansion to every combo in the element.
+- [ ] All whitespace stripped; parsing case-insensitive.
+- [ ] `parseRange` ends with a trailing-garbage check (`cursor == s.size()`).
+- [ ] `parseRange` calls `range.normalize()` before returning.
+- [ ] Rank/suit maps are reused from `Card`, not redefined; suits are s/h/c/d.
+- [ ] Original code, not a renamed `CardRange`.

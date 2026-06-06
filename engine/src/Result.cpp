@@ -1,4 +1,4 @@
-#include "equitycalc/result.h"
+#include "equitycalc/Result.h"
 #include <iomanip>
 #include <sstream>
 

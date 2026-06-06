@@ -22,14 +22,14 @@ endif()
 
 # Core library
 add_library(equitycalc_core STATIC
-    src/card.cpp
-    src/combo.cpp
-    src/range.cpp
-    src/board.cpp
-    src/parser.cpp
-    src/evaluator.cpp
-    src/calculator.cpp
-    src/result.cpp
+    src/Card.cpp
+    src/Combo.cpp
+    src/Range.cpp
+    src/Board.cpp
+    src/Parser.cpp
+    src/Evaluator.cpp
+    src/Calculator.cpp
+    src/Result.cpp
 )
 
 target_include_directories(equitycalc_core PUBLIC

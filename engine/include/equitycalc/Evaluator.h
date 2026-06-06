@@ -3,8 +3,8 @@
 // OMP boundary: this header includes <omp/HandEvaluator.h>.
 // Requires OMPEval vendored at engine/third_party/OMPEval/.
 
-#include "equitycalc/combo.h"
-#include "equitycalc/board.h"
+#include "equitycalc/Combo.h"
+#include "equitycalc/Board.h"
 #include <omp/HandEvaluator.h>
 #include <cstdint>
 

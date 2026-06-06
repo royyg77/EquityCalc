@@ -13,14 +13,26 @@ include(GoogleTest)
 # Each class gets its own test executable linked against equitycalc_core.
 # Run all with: ctest --test-dir build --output-on-failure
 
-add_executable(test_card test_card.cpp)
+add_executable(test_card TestCard.cpp)
 target_link_libraries(test_card PRIVATE equitycalc_core GTest::gtest_main)
 gtest_discover_tests(test_card)
 
-add_executable(test_combo test_combo.cpp)
+add_executable(test_combo TestCombo.cpp)
 target_link_libraries(test_combo PRIVATE equitycalc_core GTest::gtest_main)
 gtest_discover_tests(test_combo)
 
-add_executable(test_range test_range.cpp)
+add_executable(test_range TestRange.cpp)
 target_link_libraries(test_range PRIVATE equitycalc_core GTest::gtest_main)
 gtest_discover_tests(test_range)
+
+add_executable(test_board TestBoard.cpp)
+target_link_libraries(test_board PRIVATE equitycalc_core GTest::gtest_main)
+gtest_discover_tests(test_board)
+
+add_executable(test_parser TestParser.cpp)
+target_link_libraries(test_parser PRIVATE equitycalc_core GTest::gtest_main)
+gtest_discover_tests(test_parser)
+
+add_executable(test_evaluator TestEvaluator.cpp)
+target_link_libraries(test_evaluator PRIVATE equitycalc_core GTest::gtest_main)
+gtest_discover_tests(test_evaluator)

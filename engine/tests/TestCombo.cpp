@@ -1,4 +1,4 @@
-#include "equitycalc/combo.h"
+#include "equitycalc/Combo.h"
 #include <gtest/gtest.h>
 #include <cstdint>
 
