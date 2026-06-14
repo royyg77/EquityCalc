@@ -40,3 +40,7 @@ gtest_discover_tests(test_evaluator)
 add_executable(test_result TestResult.cpp)
 target_link_libraries(test_result PRIVATE equitycalc_core GTest::gtest_main)
 gtest_discover_tests(test_result)
+
+add_executable(test_calculator TestCalculator.cpp)
+target_link_libraries(test_calculator PRIVATE equitycalc_core GTest::gtest_main)
+gtest_discover_tests(test_calculator)

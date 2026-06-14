@@ -38,7 +38,7 @@ std::string Result::format() const {
         double tiePct    = ties[i]   / denom * 100.0;
         double equityPct = equity[i] * 100.0;
 
-        os << "P" << (i + 1) << ": "
+        os << "P" << (i + 1) << ": " << std::setprecision(4)
            << "equity: " << std::setw(8) << equityPct << "%"
            << "   win: " << std::setw(8) << winPct << "% (" 
                 << static_cast<uint64_t>(wins[i]) << ")"

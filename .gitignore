@@ -46,6 +46,7 @@ frontend/.vite/
 # ---- IDE / Editor ----
 .vscode/
 .idea/
+.cache/
 *.swp
 *.swo
 *~
