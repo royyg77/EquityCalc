@@ -60,7 +60,7 @@ private:
     // ── Inner-loop helpers ────────────────────────────────────────────────────
 
     // Decode flat matchup index p → comboIdx[] via mixed-radix (Decision 1).
-    // libdivide seam: swap rangeSizes_ type + plain %/÷ for libdivide_u64 in v1.5.
+    // libdivide seam: swap rangeSizes_ type + plain %/÷ for libdivide_u64 in v1.x
     void decodeMatchup(uint64_t p, unsigned* comboIdx) const noexcept;
 
     // Build available-card deck once per matchup, then recurse all runouts
