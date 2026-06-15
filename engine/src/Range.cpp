@@ -4,7 +4,7 @@
 
 namespace equitycalc {
 
-Range::Range(std::vector<Combo> combos) : combos_(std::move(combos)) {}
+Range::Range(ComboVec combos) : combos_(std::move(combos)) {}
 
 void Range::add(Combo c) {
     combos_.push_back(c);
@@ -17,7 +17,7 @@ void Range::normalize() {
     // Dedup with last-write-wins weight policy:
     // When two adjacent combos have the same cards, keep the later one's weight.
     // std::unique keeps the first, so we walk manually.
-    std::vector<Combo> deduped;
+    ComboVec deduped;
     deduped.reserve(combos_.size());
     for (auto& c : combos_) {
         if (!deduped.empty() && deduped.back() == c) {

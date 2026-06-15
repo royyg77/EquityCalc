@@ -1,4 +1,5 @@
 #include "equitycalc/Parser.h"
+#include "equitycalc/Combo.h"
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -75,14 +76,15 @@ static float parseWeight(std::string_view s, size_t& pos) {
 
 // ── Step B: expansion helpers (no cursor, no parsing) ────────────────────────
 
-static void addCombo(std::vector<Combo>& out, unsigned c1, unsigned c2, float w) {
+// Fix std::vector<Combo> type -> ComboVec
+static void addCombo(ComboVec& out, unsigned c1, unsigned c2, float w) {
     out.emplace_back(Card(static_cast<uint8_t>(c1)),
                      Card(static_cast<uint8_t>(c2)), w);
 }
 
 // Expand rank1/rank2 into combos per suited/offsuited flags.
 // Mirrors OMP's addCombos: the suited branch is skipped when r1==r2 (no suited pairs).
-static void expandCombos(std::vector<Combo>& out,
+static void expandCombos(ComboVec& out,
                           unsigned r1, unsigned r2,
                           bool suited, bool offsuited, float w) {
     if (suited && r1 != r2) {
@@ -100,7 +102,7 @@ static void expandCombos(std::vector<Combo>& out,
 }
 
 // All 1326 two-card combinations ("random").
-static void expandAll(std::vector<Combo>& out, float w) {
+static void expandAll(ComboVec& out, float w) {
     for (unsigned c1 = 1; c1 < 52; ++c1)
         for (unsigned c2 = 0; c2 < c1; ++c2)
             addCombo(out, c1, c2, w);
@@ -108,11 +110,11 @@ static void expandAll(std::vector<Combo>& out, float w) {
 
 // ── Step C: parseHand ─────────────────────────────────────────────────────────
 
-static std::vector<Combo> parseHand(std::string_view s, size_t& pos) {
+static ComboVec parseHand(std::string_view s, size_t& pos) {
     // "random" → all 1326 combos.
     if (pos + 6 <= s.size() && s.substr(pos, 6) == "random") {
         pos += 6;
-        std::vector<Combo> out;
+        ComboVec out;
         expandAll(out, 1.0f);
         return out;
     }
@@ -144,7 +146,7 @@ static std::vector<Combo> parseHand(std::string_view s, size_t& pos) {
         unsigned c1 = 4*r1 + s1, c2 = 4*r2 + s2;
         if (c1 == c2)
             throw ParseError("specific combo contains the same card twice", pos);
-        std::vector<Combo> out;
+        ComboVec out;
         addCombo(out, c1, c2, 1.0f);
         return out;
     }
@@ -156,7 +158,7 @@ static std::vector<Combo> parseHand(std::string_view s, size_t& pos) {
 
     // "+" suffix — Hard Part #1: pair-plus and kicker-plus are TWO different loops.
     if (parseChar(s, pos, '+')) {
-        std::vector<Combo> out;
+        ComboVec out;
         if (r1 == r2) {
             // Pair+: "QQ+" → QQ, KK, AA (this pair and every higher pair).
             for (unsigned r = r1; r <= 12; ++r)
@@ -182,7 +184,7 @@ static std::vector<Combo> parseHand(std::string_view s, size_t& pos) {
         if      (parseChar(s, pos, 'o')) suited2    = false;
         else if (parseChar(s, pos, 's')) offsuited2 = false;
 
-        std::vector<Combo> out;
+        ComboVec out;
         if (r1 == r2) {
             // Pair range: "22-99" — endpoint must also be a pair.
             if (r3 != r4)
@@ -210,7 +212,7 @@ static std::vector<Combo> parseHand(std::string_view s, size_t& pos) {
     }
 
     // Plain hand — no modifier.
-    std::vector<Combo> out;
+    ComboVec out;
     if (r1 == r2)
         expandCombos(out, r1, r2, false, true, 1.0f);  // pairs are never suited
     else
@@ -222,8 +224,8 @@ static std::vector<Combo> parseHand(std::string_view s, size_t& pos) {
 
 // Parse one element: hand + optional ":weight". Advances pos.
 // Weight is applied after expansion, to every combo produced by the hand.
-static std::vector<Combo> parseElement(std::string_view s, size_t& pos) {
-    std::vector<Combo> combos = parseHand(s, pos);
+static ComboVec parseElement(std::string_view s, size_t& pos) {
+    ComboVec combos = parseHand(s, pos);
 
     float weight = 1.0f;
     if (parseChar(s, pos, ':'))

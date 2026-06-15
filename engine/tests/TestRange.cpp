@@ -1,3 +1,4 @@
+#include "equitycalc/Combo.h"
 #include "equitycalc/Range.h"
 #include <gtest/gtest.h>
 #include <cstdint>
@@ -10,12 +11,12 @@ using equitycalc::Range;
 static Card C(const char* s) { return *Card::parse(s); }
 
 // Build all 6 QQ combos with an optional weight.
-static std::vector<Combo> allQQ(float w = 1.0f) {
+static equitycalc::ComboVec allQQ(float w = 1.0f) {
     return {
         Combo(C("Qd"), C("Qc"), w),
         Combo(C("Qd"), C("Qh"), w),
         Combo(C("Qd"), C("Qs"), w),
-        Combo(C("Qc"), C("Qh"), w),
+        Combo(C("Qc"), C("Qh"), w), // Fix: added line - mising before
         Combo(C("Qc"), C("Qs"), w),
         Combo(C("Qh"), C("Qs"), w),
     };
