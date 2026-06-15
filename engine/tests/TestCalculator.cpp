@@ -113,9 +113,9 @@ TEST(CalculatorIntegration, DenominatorNonzero) {
 TEST(CalculatorIntegration, WeightAffectsEquity) {
     CalculatorConfig cfg;
     cfg.enumThreshold = UINT64_MAX;
-    Result base = Calculator(ranges({"AhAs,KhKs", "QdQc"}),
+    Result base = Calculator(ranges({"AA,KK,JJ", "QdQc"}),
                              Board{}, 0, cfg).compute();
-    Result wtd  = Calculator(ranges({"AhAs:0.1,KhKs", "QdQc"}),
+    Result wtd  = Calculator(ranges({"AA:0.2,KK:0.2,JJ", "QdQc"}),
                              Board{}, 0, cfg).compute();
     // Halving AhAs drags P1's equity down relative to the equal-weight baseline.
     EXPECT_LT(wtd.equity[0], base.equity[0]);
