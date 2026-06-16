@@ -1,36 +1,8 @@
-# name: CI
-
-# on:
-#   push:
-#     branches: [ main, 'fix/**' ]
-#   pull_request:
-#     branches: [ main ]
-
-# jobs:
-#   build-and-test:
-#     runs-on: ubuntu-latest
-
-#     steps:
-#       - name: Check out repository
-#         uses: actions/checkout@v4
-
-#       - name: Install build tools
-#         run: sudo apt-get update && sudo apt-get install -y cmake build-essential
-
-#       - name: Configure
-#         run: cmake -S engine -B build -DCMAKE_BUILD_TYPE=Debug
-
-#       - name: Build
-#         run: cmake --build build
-
-#       - name: Run tests
-#         run: ctest --test-dir build --output-on-failure
-
 name: CI
 
 on:
   push:
-    branches: [ main, 'fix/**', 'ci/**']
+    branches: [ main, 'ci/**']
   pull_request:
     branches: [ main ]
 
@@ -58,5 +30,21 @@ jobs:
         run: cmake --build build --config ${{ matrix.build_type }}
 
       - name: Run tests
+        run: ctest --test-dir build --config ${{ matrix.build_type }} --output-on-failure
+
+      - name: Build (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: cmake --build build
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        run: cmake --build build --config ${{ matrix.build_type }}
+
+      - name: Run tests (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Run tests (Windows)
+        if: runner.os == 'Windows'
         run: ctest --test-dir build --config ${{ matrix.build_type }} --output-on-failure
 
