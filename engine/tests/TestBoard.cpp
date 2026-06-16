@@ -2,6 +2,10 @@
 #include <gtest/gtest.h>
 #include <cstdint>
 
+// #include <omp/Util.h>
+#include <bit>
+
+
 using equitycalc::Board;
 using equitycalc::Card;
 using equitycalc::Combo;
@@ -47,7 +51,11 @@ TEST(BoardAddCard, MaskHasExactlyNBitsSet) {
     b.addCard(C("2c"));
     b.addCard(C("7d"));
     b.addCard(C("9s"));
-    EXPECT_EQ(__builtin_popcountll(b.mask()), 3)
+    // EXPECT_EQ(__builtin_popcountll(b.mask()), 3)
+    //     << "mask should have exactly 3 bits set for a 3-card board";
+    // EXPECT_EQ(omp::bitCount(b.mask()), 3u)
+    //     << "mask should have exactly 3 bits set for a 3-card board";
+    EXPECT_EQ(std::popcount(b.mask()), 3)
         << "mask should have exactly 3 bits set for a 3-card board";
 }
 

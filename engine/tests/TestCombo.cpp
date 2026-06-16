@@ -2,6 +2,9 @@
 #include <gtest/gtest.h>
 #include <cstdint>
 
+#include <bit>
+
+
 using equitycalc::Card;
 using equitycalc::Combo;
 
@@ -35,7 +38,10 @@ TEST(ComboCanonicalOrder, SameResultBothDirections) {
 
 TEST(ComboCardMask, ExactlyTwoBitsSet) {
     Combo combo(C("Ah"), C("Ks"));
-    int bits = __builtin_popcountll(combo.cardMask);
+    // int bits = __builtin_popcountll(combo.cardMask);
+    // int bits = (int)omp::bitCount(combo.cardMask);
+    int bits = std::popcount(combo.cardMask);
+
     EXPECT_EQ(bits, 2)
         << "cardMask=" << combo.cardMask << " should have exactly 2 bits set";
 }
