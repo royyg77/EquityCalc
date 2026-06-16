@@ -14,7 +14,9 @@ namespace equitycalc {
 class Range {
 public:
     Range() = default;
-    explicit Range(std::vector<Combo> combos);
+    // explicit Range(std::vector<Combo> combos);
+    // Fix: change vector<Combo> to ComboVec
+    explicit Range(ComboVec combos);
 
     // Append a combo; dedup/sort deferred to normalize().
     void add(Combo c);
@@ -26,14 +28,14 @@ public:
     // Call once after board/dead cards are known; totalWeight() stays consistent.
     void removeConflicts(uint64_t deadMask);
 
-    const std::vector<Combo>& combos() const noexcept { return combos_; }
+    const ComboVec& combos() const noexcept { return combos_; }
     size_t size() const noexcept { return combos_.size(); }
 
     // Sum of combo weights — use this for equity normalization, not size().
     double totalWeight() const;
 
 private:
-    std::vector<Combo> combos_;
+    ComboVec combos_;
 };
 
 }  // namespace equitycalc

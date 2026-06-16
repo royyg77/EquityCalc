@@ -17,6 +17,7 @@ Makefile
 compile_commands.json
 CTestTestfile.cmake
 Testing/
+build-debug/
 
 # ---- Python ----
 __pycache__/

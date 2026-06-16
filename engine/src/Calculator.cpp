@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstring>
+#include <omp/Util.h>
 #include <random>
 #include <stdexcept>
 
@@ -55,7 +56,9 @@ Result Calculator::compute() {
     // Steps 3–5: Estimate total scenarios in floating point to avoid overflow.
     unsigned boardCount = board_.count();
     unsigned remaining  = (boardCount >= 5) ? 0u : (5u - boardCount);
-    unsigned fixedCards = static_cast<unsigned>(__builtin_popcountll(fixedMask));
+    // fix: remove GCC/Clang intrinsics and replace with omp wrappers from Util.h
+    // unsigned fixedCards = static_cast<unsigned>(__builtin_popcountll(fixedMask));
+    unsigned fixedCards = static_cast<unsigned>(omp::bitCount(fixedMask));
     unsigned deckEst    = (fixedCards + 2u * n < 52u)
                           ? (52u - fixedCards - 2u * n) : 0u;
 
@@ -288,7 +291,10 @@ Result Calculator::buildResult(const BatchAccumulator& acc, unsigned n,
     for (unsigned mask = 1; mask < (1u << n); ++mask) {
         double w = acc.winsByPlayerMask[mask];
         if (w == 0.0) continue;
-        unsigned k     = static_cast<unsigned>(__builtin_popcount(mask));
+        // fix: remove GCC/Clang intrinsics and replace with omp wrappers from Util.h
+        // unsigned k     = static_cast<unsigned>(__builtin_popcount(mask));
+        unsigned k     = static_cast<unsigned>(omp::bitCount(mask));
+
         double   share = w / static_cast<double>(k);
         for (unsigned i = 0; i < n; ++i) {
             if (!(mask & (1u << i))) continue;
@@ -322,7 +328,10 @@ double Calculator::computeCiHalfWidth(const BatchAccumulator& acc,
             if (!(mask & (1u << i))) continue;
             double w = acc.winsByPlayerMask[mask];
             if (w == 0.0) continue;
-            unsigned k = static_cast<unsigned>(__builtin_popcount(mask));
+            // fix: remove GCC/Clang intrinsics and replace with omp wrappers from Util.h
+            // unsigned k = static_cast<unsigned>(__builtin_popcount(mask));
+            unsigned k = static_cast<unsigned>(omp::bitCount(mask));
+
             eq += w / static_cast<double>(k);
         }
         eq /= N;

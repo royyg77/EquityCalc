@@ -8,6 +8,10 @@
 #include <omp/Hand.h>
 #include <cstdint>
 
+// fix for CI issue
+#include <omp/Util.h>
+#include <vector>
+
 namespace equitycalc {
 
 // Two specific hole cards plus a weight and the cached evaluation data.
@@ -17,6 +21,7 @@ namespace equitycalc {
 //   omp::Hand seven = combo.evalHand + board.evalHand;  // one SSE add
 // Do NOT rebuild omp::Hand from card indices inside the loop.
 class Combo {
+
 public:
     Card    c1;        // higher card (canonical: c1 >= c2 by value)
     Card    c2;        // lower card
@@ -47,5 +52,8 @@ public:
         return c2 < o.c2;
     }
 };
+
+    using ComboVec = std::vector<Combo, omp::AlignedAllocator<Combo>>;
+
 
 }  // namespace equitycalc
