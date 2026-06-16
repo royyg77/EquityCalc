@@ -44,7 +44,11 @@ jobs:
         if: runner.os != 'Windows'
         run: ctest --test-dir build --output-on-failure
 
+      # - name: Run tests (Windows)
+      #   if: runner.os == 'Windows'
+      #   run: ctest --test-dir build --config ${{ matrix.build_type }} --output-on-failure
+
       - name: Run tests (Windows)
         if: runner.os == 'Windows'
-        run: ctest --test-dir build --config ${{ matrix.build_type }} --output-on-failure
+        run: ctest --test-dir build -C ${{ matrix.build_type }} --output-on-failure
 
