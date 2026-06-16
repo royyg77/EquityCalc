@@ -26,12 +26,6 @@ jobs:
       - name: Configure
         run: cmake -S engine -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
 
-      # - name: Build
-      #   run: cmake --build build --config ${{ matrix.build_type }}
-
-      # - name: Run tests
-      #   run: ctest --test-dir build --config ${{ matrix.build_type }} --output-on-failure
-
       - name: Build (Linux/macOS)
         if: runner.os != 'Windows'
         run: cmake --build build
@@ -43,10 +37,6 @@ jobs:
       - name: Run tests (Linux/macOS)
         if: runner.os != 'Windows'
         run: ctest --test-dir build --output-on-failure
-
-      # - name: Run tests (Windows)
-      #   if: runner.os == 'Windows'
-      #   run: ctest --test-dir build --config ${{ matrix.build_type }} --output-on-failure
 
       - name: Run tests (Windows)
         if: runner.os == 'Windows'
